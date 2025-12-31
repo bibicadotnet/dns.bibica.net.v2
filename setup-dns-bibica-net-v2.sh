@@ -29,6 +29,24 @@ validate_api_token() {
     [[ ${#1} -ge 40 ]]
 }
 
+verify_cloudflare_token() {
+    local token=$1
+    print_info "Verifying Cloudflare API Token..."
+    
+    # Call Cloudflare API to verify the token
+    # Added --connect-timeout to prevent the script from hanging on network issues
+    local response=$(curl -s --connect-timeout 10 -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+        -H "Authorization: Bearer $token" \
+        -H "Content-Type: application/json")
+    
+    # Check if the response contains success:true and the specific active message
+    if [[ "$response" == *"\"success\":true"* ]] && [[ "$response" == *"This API Token is valid and active"* ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 echo "=========================================="
 echo "    PUBLIC DNS SERVICE INSTALLATION"
 echo "        (MOSDNS-X & CADDY STACK)"
@@ -48,7 +66,7 @@ done
 
 echo ""
 echo "=========================================="
-echo "       CLOUDFLARE API TOKEN"
+echo "        CLOUDFLARE API TOKEN"
 echo "=========================================="
 echo ""
 echo "If you don't have an API Token yet, follow these steps:"
@@ -66,10 +84,14 @@ while true; do
     read -p "Enter Cloudflare API Token: " API_TOKEN
     
     if validate_api_token "$API_TOKEN"; then
-        print_success "Valid API Token"
-        break
+        if verify_cloudflare_token "$API_TOKEN"; then
+            print_success "API Token is valid and active."
+            break
+        else
+            print_error "API Token is incorrect or inactive. Please check your token and permissions."
+        fi
     else
-        print_error "Invalid API Token (must be at least 40 characters). Please try again."
+        print_error "Invalid API Token format (must be at least 40 characters). Please try again."
     fi
 done
 
@@ -139,7 +161,7 @@ echo "=========================================="
 echo "      INSTALLATION SUCCESSFUL!"
 echo "=========================================="
 echo ""
-print_success "Public DNS service (Mosdns-x & Caddy) has been installed successfully!"
+print_success "Public DNS service (mosdns-x & Caddy) has been installed successfully!"
 echo ""
 echo "=========================================="
 echo "          DNS CONFIGURATION"
@@ -166,7 +188,7 @@ echo "=========================================="
 echo "          ADDITIONAL INFO"
 echo "=========================================="
 echo ""
-echo "  - Core Engine: Mosdns-x (DNS Forwarder)"
+echo "  - Core Engine: MOSDNS-X (DNS Forwarder)"
 echo "  - Web Server/SSL: Caddy v2 (Reverse Proxy)"
 echo "  - Ad-blocking Cron: updates daily at 2:00 AM"
 echo "  - Restart: cd /home && docker compose restart"
