@@ -1,0 +1,25 @@
+{
+  log {
+    output discard
+  }
+
+  acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+}
+
+dns.bibica.net {
+
+  # Health check
+  handle /health {
+    respond "OK" 200
+  }
+
+  # DoH + DoH3
+	handle /dns-query {
+	  reverse_proxy mosdns-x:8090
+	}
+
+  # Default redirect
+  handle {
+    redir https://bibica.net/thu-nghiem-dns-mien-phi-tu-bibica-net/ 302
+  }
+}

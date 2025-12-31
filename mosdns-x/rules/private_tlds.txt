@@ -1,0 +1,33 @@
+# RFC 6761 - Special-Use Domain Names
+local
+localhost
+test
+invalid
+example
+example.com
+example.net
+example.org
+
+# RFC 9476 - .alt TLD for non-DNS names
+alt
+
+# RFC 8375 - Home Networking Control Protocol
+home.arpa
+
+# RFC 7686 - Tor Onion Services
+onion
+
+# Common router defaults (non-RFC, best practice)
+lan
+home
+localdomain
+internal
+router
+gateway
+modem
+
+# DNS Meta Queries
+full:version.bind
+full:id.server
+full:hostname.bind
+full:authors.bind
