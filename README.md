@@ -1,3 +1,4 @@
+![6Rf8gynv](https://img.bibica.net/6Rf8gynv.png)
 # Public DNS Service (MosDNS-X & Caddy)
 
 This documentation provides a technical overview and installation guide for a high-performance, encrypted DNS stack. It utilizes **MosDNS-X** for intelligent routing and **Caddy v2** for automatic SSL and reverse proxying.
