@@ -226,13 +226,13 @@ plugins:
 
         # --- Memory Cache Lookup ---
         # Check local cache before forwarding to upstreams
+        - ecs_handler
         - main_cache
 
         # --- Route Google Domains ---
         # Forward to Google DNS with ECS support and TTL adjustment
         - if: match_google_domain
           exec:
-            - ecs_handler
             - upstream_google
             - ttl_short
             - _return
@@ -248,7 +248,6 @@ plugins:
         # Forward to Cloudflare Gateway with ECS for optimal CDN edge selection
         - if: match_cdn_domain
           exec:
-            - ecs_handler
             - upstream_cloudflare_gateway
             - ttl_short
             - _return
@@ -265,7 +264,6 @@ plugins:
         # If response contains a CDN-related CNAME, re-query via Cloudflare Gateway
         - if: response_has_cdn_cname
           exec:
-            - ecs_handler
             - upstream_cloudflare_gateway
             - ttl_short
             - _return
@@ -293,4 +291,3 @@ servers:
         addr: "0.0.0.0:853"
         cert: "/caddy_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/dns.bibica.net/dns.bibica.net.crt"
         key: "/caddy_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/dns.bibica.net/dns.bibica.net.key"
-
