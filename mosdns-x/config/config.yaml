@@ -130,14 +130,12 @@ plugins:
     args:
       upstream:
         - addr: "https://bu0eg1tdzu.cloudflare-gateway.com/dns-query"
-        - addr: "https://97nsi83nhg.cloudflare-gateway.com/dns-query"
 
   - tag: upstream_google
     type: fast_forward
     args:
       upstream:
         - addr: "https://8.8.8.8/dns-query"
-        - addr: "https://8.8.4.4/dns-query"
 
   - tag: upstream_mullvad
     type: fast_forward
@@ -150,7 +148,6 @@ plugins:
     args:
       upstream:
         - addr: "https://1.1.1.1/dns-query"
-        - addr: "https://1.0.0.1/dns-query"
 
 # ============================================================================
 # MAIN SEQUENCE - Primary Query Processing Pipeline
@@ -225,7 +222,7 @@ plugins:
 
         # --- Logging ---
         # Generate summary for non-blocked requests
-        - _query_summary
+        #- _query_summary
 
         # --- Memory Cache Lookup ---
         # Check local cache before forwarding to upstreams
