@@ -7,7 +7,7 @@
 # LOGGING CONFIGURATION - System Events & Error Tracking
 # ============================================================================
 log:
-  level: info # Options: debug, info, error, warn
+  level: error # Options: debug, info, error, warn
   file: "log/mosdns.log"
 
 # ============================================================================
@@ -293,3 +293,4 @@ servers:
         addr: "0.0.0.0:853"
         cert: "/caddy_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/dns.bibica.net/dns.bibica.net.crt"
         key: "/caddy_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/dns.bibica.net/dns.bibica.net.key"
+
