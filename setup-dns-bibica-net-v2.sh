@@ -119,6 +119,10 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+TOTAL_RAM_MB=$(free -m | awk 'NR==2 {print $2}')
+REDIS_MEMORY_MB=$((TOTAL_RAM_MB / 2))
+
+sed -i "s/--maxmemory 1024mb/--maxmemory ${REDIS_MEMORY_MB}mb/g" /home/compose.yml
 sed -i "s/CLOUDFLARE_API_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/CLOUDFLARE_API_TOKEN=$API_TOKEN/g" /home/compose.yml
 sed -i "s/dns\.bibica\.net {/$DOMAIN {/g" /home/Caddyfile
 sed -i "s/dns\.bibica\.net/$DOMAIN/g" /home/mosdns-x/config/config.yaml
