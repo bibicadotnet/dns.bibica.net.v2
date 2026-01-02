@@ -5,38 +5,80 @@ This documentation provides a technical overview and installation guide for a hi
 
 ## I. Technical Overview
 
-### 1. Core Architecture and Query Flow
+The system is designed using a Multi-Phase Pipeline model combined with Multi-Tier Redis Caching to optimize speed, privacy, and CDN resolution accuracy based on user location. This architecture ensures a balance between access speed, security, and geographic-specific CDN node optimization.
 
-The system processes DNS queries through a structured pipeline to optimize speed and security:
+### PHASE 1: Traffic Filtering
 
-* **Request Filtering:** Rejects `ANY` queries (RFC 8482), blocks IPv6 (AAAA) to prioritize IPv4 stability, and denies PTR (Reverse DNS) and Private TLD requests.
-* **Sanitization:** Strips inbound Client Subnet (ECS) data, filters EDNS0 options for all upstream requests and QUIC-optimized MTU (1232 bytes).
-* **Performance:** Persistent Redis-backed cache with 3-day TTL to serve cached DNS responses immediately (auto-allocated 50% of server RAM across 5 isolated databases)
-* **Domain Rewriting:** Applies local redirect and rewrite rules via `dns_redirect`.
+Early rejection of junk queries to protect system resources:
 
-### 2. Intelligent Upstream Routing
+* **Block Record Types:** `ANY` (DDoS prevention), `IPv6` (AAAA), and `PTR` (Reverse DNS).
+* **Block Internal Domains:** Local TLDs such as `.lan, .local, .home`, etc.
+* **Behavior:** Returns `REFUSED`, `NOTIMP`, or `NXDOMAIN`.
 
-Queries are dynamically routed based on domain type to ensure optimal latency:
+### PHASE 2: Normalization & Optimization
 
-* **CDN Domains:** Routed to **Cloudflare Gateway** with ECS (EDNS Client Subnet) enabled for optimal edge server selection.
-* **Google Domains:** Forwarded to **Google DNS** (`8.8.8.8`/`8.8.4.4`) with ECS support and minimal TTL adjustment.
-* **Mullvad Domains:** Dedicated routing to `dns.mullvad.net`.
-* **Standard Queries:** All other queries are processed by `upstream_cloudflare` (`1.1.1.1`/`1.0.0.1`).
+Packet sanitization before processing core logic:
 
-### 3. Content Filtering
+* **Strip ECS:** Removes legacy Client Subnet info sent by client devices (if any).
+* **Optimized MTU:** Limits packets to 1232 bytes to prevent fragmentation, optimized for local network infrastructure.
+* **Internal Redirect:** Routes internal domains according to custom rules.
 
-The system includes a built-in ad-blocking mechanism:
+### PHASE 3: Security & Adblock
 
-* **Blocklist & Allowlist:** Returns `NXDOMAIN` for domains in the blocklist, while the allowlist ensures essential services are not interrupted.
+Validated against `blocklists.txt` and `allowlists.txt`.
 
-### 4. Protocol Support
+* **Behavior:** If a domain is in `allowlists.txt`, it is bypassed even if present in the blocklist. If only present in `blocklists.txt`, the system returns `NXDOMAIN`.
 
-The service supports modern encrypted DNS protocols out of the box:
+### PHASE 4: Smart Routing
 
-* **DNS-over-HTTPS (DoH):** `https://<DOMAIN>/dns-query`
-* **DNS-over-TLS (DoT):** `tls://<DOMAIN>`
-* **DNS-over-HTTP/3 (DoH3):** `h3://<DOMAIN>/dns-query`
-* **DNS-over-QUIC (DoQ):** `quic://<DOMAIN>`
+Classification and redirection to appropriate Upstreams:
+
+* **Google Upstream:** For domains using Google DNS; appends ECS /24; utilizes dedicated cache.
+* **Cloudflare Gateway Upstream:** For identified CDN domains; appends ECS /24; utilizes dedicated cache.
+* **Mullvad Upstream:** For high-privacy domains; No ECS attached; utilizes dedicated cache.
+* **Default Branch:** All remaining domains are forwarded to Cloudflare 1.1.1.1.
+
+### PHASE 5: Recursive CDN Discovery
+
+Applied to the Default Branch when a query resolves to a CDN CNAME:
+
+* The system scans the CNAME records in the response.
+* If a CDN infrastructure (e.g., Cloudfront, Akamai) is detected, the system appends ECS /24 and re-routes the query through Cloudflare Gateway to fetch the nearest CDN edge IP.
+
+---
+
+## Multi-Tier Redis Cache Structure
+
+The system utilizes 5 isolated Redis databases to optimize routing logic:
+
+| Database | Tag | Data Content | Technical Spec |
+| --- | --- | --- | --- |
+| Redis 0 | google_cache | Google DNS results | Includes ECS /24 (Location-aware) |
+| Redis 1 | cdn_cache | CF Gateway results | Includes ECS /24 (Static CDN list) |
+| Redis 2 | cname_cdn_cache | Recursive CDN results | Includes ECS /24 (Detected via Phase 5) |
+| Redis 3 | mullvad_cache | Mullvad DNS results | Non-ECS (Absolute privacy) |
+| Redis 4 | cloudflare_cache | Cloudflare DNS results | Non-ECS (General purpose) |
+
+---
+
+## Protocols & Management
+
+### Supported Protocols
+
+* Supports modern encrypted DNS protocols:
+
+```
+DNS-over-HTTPS (DoH): https://<DOMAIN>/dns-query
+DNS-over-TLS (DoT): tls://<DOMAIN>
+DNS-over-HTTP/3 (DoH3): h3://<DOMAIN>/dns-query
+DNS-over-QUIC (DoQ): quic://<DOMAIN>
+```
+
+### System Management
+
+* **Data Providers:** Configuration files for CDN, Google, Mullvad, and blocklists utilize auto_reload for real-time updates.
+* **SSL Management:** Automated issuance and renewal of Let's Encrypt certificates via Caddy.
+* **Logging:** Monitored at info level in log/mosdns.log along with _query_summary for activity auditing.
 
 ---
 
