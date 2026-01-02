@@ -1,6 +1,6 @@
 # =============================================================================
 # MosDNS-X Configuration for dns.bibica.net
-# Architecture: Clean DNS, ECS CDN, Domain Routing & Memory Cache
+# Architecture: Clean DNS, ECS CDN, Domain Routing with Persistent Redis Cache
 # =============================================================================
 
 # ============================================================================
@@ -76,27 +76,22 @@ plugins:
     type: query_matcher
     args:
       domain: ["provider:cdn_domains"]
-
   - tag: match_google_domain
     type: query_matcher
     args:
       domain: ["provider:google_domains"]
-
   - tag: match_mullvad_domain
     type: query_matcher
     args:
       domain: ["provider:mullvad_domains"]
-
   - tag: match_allowlisted
     type: query_matcher
     args:
       domain: ["provider:allowlist_domains"]
-
   - tag: match_blocklisted
     type: query_matcher
     args:
       domain: ["provider:blocklist_domains"]
-
   - tag: match_domain_private_tld
     type: query_matcher
     args:
@@ -108,55 +103,60 @@ plugins:
     args:
       cname: ["provider:cdn_domains"]
 
-  # ----- Memory Cache -----
+  # ----- Redis Cache -----
   # Cache for Google domains (with ECS)
   - tag: google_cache
     type: cache
     args:
-      size: 163840
+      redis: "redis://172.18.0.7:6379/0"
+      redis_timeout: 1000
       compress_resp: false
       cache_everything: true
-      lazy_cache_ttl: 3600
+      lazy_cache_ttl: 259200
       lazy_cache_reply_ttl: 5
 
   # Cache for CDN direct queries (with ECS)
   - tag: cdn_direct_cache
     type: cache
     args:
-      size: 163840
+      redis: "redis://172.18.0.7:6379/1"
+      redis_timeout: 1000
       compress_resp: false
       cache_everything: true
-      lazy_cache_ttl: 3600
+      lazy_cache_ttl: 259200
       lazy_cache_reply_ttl: 5
 
   # Cache for CDN CNAME responses (with ECS)
   - tag: cdn_cname_cache
     type: cache
     args:
-      size: 163840
+      redis: "redis://172.18.0.7:6379/2"
+      redis_timeout: 1000
       compress_resp: false
       cache_everything: true
-      lazy_cache_ttl: 3600
+      lazy_cache_ttl: 259200
       lazy_cache_reply_ttl: 5
 
   # Cache for Mullvad upstream (no ECS)
   - tag: mullvad_cache
     type: cache
     args:
-      size: 1024
+      redis: "redis://172.18.0.7:6379/3"
+      redis_timeout: 1000
       compress_resp: false
       cache_everything: false
-      lazy_cache_ttl: 86400
+      lazy_cache_ttl: 259200
       lazy_cache_reply_ttl: 5
 
   # Cache for Cloudflare upstream (no ECS)
   - tag: cloudflare_cache
     type: cache
     args:
-      size: 163840
+      redis: "redis://172.18.0.7:6379/4"
+      redis_timeout: 1000
       compress_resp: false
       cache_everything: false
-      lazy_cache_ttl: 86400
+      lazy_cache_ttl: 259200
       lazy_cache_reply_ttl: 5
 
   # ----- DNS Redirect/Rewrite -----
@@ -301,6 +301,9 @@ plugins:
         # --- Default Upstream ---
         # Use standard Cloudflare DNS for all other queries
         - upstream_cloudflare
+        
+        # --- TTL Override ---
+        # Force short TTL for client-side caching control
         - ttl_short
 
         # ======================================================================
@@ -327,7 +330,7 @@ servers:
       - protocol: http
         addr: "0.0.0.0:8090"
         url_path: "/dns-query"
-        get_user_ip_from_header: "X-Forwarded-For"  # Support reverse proxy
+        get_user_ip_from_header: "X-Forwarded-For"
 
       # --- DNS-over-TLS (DoT) ---
       - protocol: tls
