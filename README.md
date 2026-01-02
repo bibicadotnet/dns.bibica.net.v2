@@ -11,7 +11,7 @@ The system processes DNS queries through a structured pipeline to optimize speed
 
 * **Request Filtering:** Rejects `ANY` queries (RFC 8482), blocks IPv6 (AAAA) to prioritize IPv4 stability, and denies PTR (Reverse DNS) and Private TLD requests.
 * **Sanitization:** Strips inbound Client Subnet (ECS) data and filters EDNS0 options for all upstream requests.
-* **Performance:** Implements a 524,288-entry memory cache with **Lazy Cache** (TTL up to 86,400s) to serve cached responses immediately.
+* **Performance:** Persistent Redis-backed DNS cache with 3-day TTL, auto-allocated 50% of server RAM across 5 isolated databases.
 * **Domain Rewriting:** Applies local redirect and rewrite rules via `dns_redirect`.
 
 ### 2. Intelligent Upstream Routing
