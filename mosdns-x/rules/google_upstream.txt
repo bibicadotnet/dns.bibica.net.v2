@@ -13,6 +13,7 @@ ggpht.com
 gstatic.com
 googleusercontent.com
 googleapis.com
+googleapis.cn
 googlehosted.com
 1e100.net
 gvt1.com
