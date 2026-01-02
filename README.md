@@ -10,7 +10,7 @@ This documentation provides a technical overview and installation guide for a hi
 The system processes DNS queries through a structured pipeline to optimize speed and security:
 
 * **Request Filtering:** Rejects `ANY` queries (RFC 8482), blocks IPv6 (AAAA) to prioritize IPv4 stability, and denies PTR (Reverse DNS) and Private TLD requests.
-* **Sanitization:** Strips inbound Client Subnet (ECS) data and filters EDNS0 options for all upstream requests.
+* **Sanitization:** Strips inbound Client Subnet (ECS) data, filters EDNS0 options for all upstream requests and QUIC-optimized MTU (1232 bytes).
 * **Performance:** Persistent Redis-backed cache with 3-day TTL to serve cached DNS responses immediately (auto-allocated 50% of server RAM across 5 isolated databases)
 * **Domain Rewriting:** Applies local redirect and rewrite rules via `dns_redirect`.
 
