@@ -109,12 +109,53 @@ plugins:
       cname: ["provider:cdn_domains"]
 
   # ----- Memory Cache -----
-  - tag: main_cache
+  # Cache for Google domains (with ECS)
+  - tag: google_cache
     type: cache
     args:
-      size: 524288
+      size: 163840
       compress_resp: false
       cache_everything: true
+      lazy_cache_ttl: 3600
+      lazy_cache_reply_ttl: 5
+
+  # Cache for CDN direct queries (with ECS)
+  - tag: cdn_direct_cache
+    type: cache
+    args:
+      size: 163840
+      compress_resp: false
+      cache_everything: true
+      lazy_cache_ttl: 3600
+      lazy_cache_reply_ttl: 5
+
+  # Cache for CDN CNAME responses (with ECS)
+  - tag: cdn_cname_cache
+    type: cache
+    args:
+      size: 163840
+      compress_resp: false
+      cache_everything: true
+      lazy_cache_ttl: 3600
+      lazy_cache_reply_ttl: 5
+
+  # Cache for Mullvad upstream (no ECS)
+  - tag: mullvad_cache
+    type: cache
+    args:
+      size: 1024
+      compress_resp: false
+      cache_everything: false
+      lazy_cache_ttl: 86400
+      lazy_cache_reply_ttl: 5
+
+  # Cache for Cloudflare upstream (no ECS)
+  - tag: cloudflare_cache
+    type: cache
+    args:
+      size: 163840
+      compress_resp: false
+      cache_everything: false
       lazy_cache_ttl: 86400
       lazy_cache_reply_ttl: 5
 
@@ -224,16 +265,23 @@ plugins:
         # Generate summary for non-blocked requests
         #- _query_summary
 
-        # --- Memory Cache Lookup ---
-        # Check local cache before forwarding to upstreams
-        - ecs_handler
-        - main_cache
-
         # --- Route Google Domains ---
         # Forward to Google DNS with ECS support and TTL adjustment
         - if: match_google_domain
           exec:
+            - ecs_handler
+            - google_cache
             - upstream_google
+            - ttl_short
+            - _return
+
+        # --- Route CDN Domains ---
+        # Forward to Cloudflare Gateway with ECS for optimal CDN edge selection
+        - if: match_cdn_domain
+          exec:
+            - ecs_handler
+            - cdn_direct_cache
+            - upstream_cloudflare_gateway
             - ttl_short
             - _return
 
@@ -241,20 +289,19 @@ plugins:
         # Dedicated routing for Mullvad services
         - if: match_mullvad_domain
           exec:
+            - mullvad_cache
             - upstream_mullvad
-            - _return
-
-        # --- Route CDN Domains ---
-        # Forward to Cloudflare Gateway with ECS for optimal CDN edge selection
-        - if: match_cdn_domain
-          exec:
-            - upstream_cloudflare_gateway
             - ttl_short
             - _return
+
+        # --- Memory Cache Lookup ---
+        # Check local cache before forwarding to upstreams
+        - cloudflare_cache
 
         # --- Default Upstream ---
         # Use standard Cloudflare DNS for all other queries
         - upstream_cloudflare
+        - ttl_short
 
         # ======================================================================
         # PHASE 5: Post-Processing (Recursive CNAME Resolution)
@@ -264,6 +311,8 @@ plugins:
         # If response contains a CDN-related CNAME, re-query via Cloudflare Gateway
         - if: response_has_cdn_cname
           exec:
+            - ecs_handler
+            - cdn_cname_cache
             - upstream_cloudflare_gateway
             - ttl_short
             - _return
