@@ -165,38 +165,30 @@ plugins:
     args:
       rule: ["provider:redirect_rules"]
 
-# ----- Upstream Resolvers -----
+  # ----- Upstream Resolvers -----
   - tag: upstream_cloudflare_gateway
     type: fast_forward
     args:
       upstream:
-        - addr: "tls://bu0eg1tdzu.cloudflare-gateway.com"
-          enable_pipeline: true
-          kernel_tx: true
+        - addr: "https://bu0eg1tdzu.cloudflare-gateway.com/dns-query"
 
   - tag: upstream_google
     type: fast_forward
     args:
       upstream:
-        - addr: "tls://8.8.8.8"
-          enable_pipeline: true
-          kernel_tx: true
+        - addr: "https://8.8.8.8/dns-query"
 
   - tag: upstream_mullvad
     type: fast_forward
     args:
       upstream:
-        - addr: "tls://dns.mullvad.net"
-          enable_pipeline: true
-          kernel_tx: true
+        - addr: "https://dns.mullvad.net/dns-query"
 
   - tag: upstream_cloudflare
     type: fast_forward
     args:
       upstream:
-        - addr: "tls://1.1.1.1"
-          enable_pipeline: true
-          kernel_tx: true
+        - addr: "https://1.1.1.1/dns-query"
 
 # ============================================================================
 # MAIN SEQUENCE - Primary Query Processing Pipeline
